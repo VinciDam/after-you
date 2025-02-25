@@ -1,5 +1,6 @@
-import spacy
+import argparse
 import os
+import spacy
 
 # Load the spaCy model for POS tagging
 nlp = spacy.load("en_core_web_sm")
@@ -13,7 +14,7 @@ def pos_tag_poem(poem_text):
     """
     doc = nlp(poem_text)
     return [(token.text, token.pos_) for token in doc if token.pos_ not in 
-            ['PUNCT', 'SPACE', 'EOL']]
+            ['PUNCT', 'SPACE', 'EOL']] # exclude certain POS
 
 def extract_anchor_word_positions(corpus_text, anchor_word):
     """
@@ -90,8 +91,6 @@ def generate_poem(input_text, input_poem, anchor_word="you"):
     
     # Step 6: Format the output poem with the word sequence and the original poem structure
     poem_structure = [len(line.split()) for line in input_poem.splitlines()]
-    print(len(word_sequence), poem_structure)
-    print(word_sequence[:10])
     formatted_poem = format_output_poem(word_sequence, poem_structure)
     
     return formatted_poem
@@ -109,8 +108,6 @@ def format_output_poem(word_sequence, poem_structure):
     
     # For each line in the input poem, grab the corresponding number of words
     for words_in_line in poem_structure:
-        # if words_in_line == 0:
-        #     poem_lines.append('\n')
         line = ' '.join(word_sequence[word_index: word_index + words_in_line])
         poem_lines.append(line)
         word_index += words_in_line
@@ -127,31 +124,48 @@ def read_input_file(file_path):
     with open(file_path, 'r') as file:
         return file.read()  # Return the content as a single string
 
-# Function to write the generated poem to a file
 def write_poem_to_file(poem, output_file_path):
+    """Write the generated poem to a file."""
     with open(output_file_path, 'w') as f:
         f.write(poem)
 
-# Function to name output file
 def create_file_name(input_text_file, input_poem):
+    """Name output file according to input poem + text."""
     w1 = os.path.basename(input_text_file).split('.')[0]
     w2 = os.path.basename(input_poem).split('.')[0]
     return f"{w1}-{w2}.txt"
 
-# Set file paths
-input_text_file = '../data/input_text_files/Elon-Alice.txt'
-input_poem = '../data/input_poems/orange-blossoms.txt'
-output_file = create_file_name(input_text_file, input_poem)
-output_file = os.path.join('../data/output_poems', output_file)
+def main(input_text_file, input_poem, anchor_word):
 
-# Read the input files
-input_text_content = read_input_file(input_text_file)
-input_poem_content = read_input_file(input_poem)
+    output_file = create_file_name(input_text_file, input_poem)
+    output_file = os.path.join('../data/output_poems', output_file)
 
-# Generate the poem based on the input files
-generated_poem = generate_poem(input_text_content, input_poem_content, anchor_word="you")
+    # Read the input files
+    input_text_content = read_input_file(input_text_file)
+    input_poem_content = read_input_file(input_poem)
 
-# Write the generated poem to a new file
-write_poem_to_file(generated_poem, output_file)
+    # Generate the poem based on the input files
+    generated_poem = generate_poem(input_text_content, input_poem_content, anchor_word)
 
-print("Poem generation complete. Check the 'generated_poem.txt' file.")
+    # Write the generated poem to a new file
+    write_poem_to_file(generated_poem, output_file)
+
+    print("Poem generation complete. Check the 'generated_poem.txt' file.")
+
+if __name__ == "__main__":
+
+    # Set up the argument parser
+    parser = argparse.ArgumentParser(description="Build a poem.")
+    
+    # Define expected arguments: two files and a string
+    parser.add_argument('input_text', type=str, help='Path to the input text (e.g. interview)')
+    parser.add_argument('input_poem', type=str, help='Path to the input poem. The structure and \
+                        POS of this poem will be mapped to the output poem')
+    parser.add_argument('--anchor_word', type=str, default="you", help='The POS following the \
+                        anchor word will be used.')
+    
+    # Parse the command line arguments
+    args = parser.parse_args()
+    
+    # Call the main function with the parsed arguments
+    main(args.input_text, args.input_poem, args.anchor_word)
